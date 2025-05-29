@@ -632,7 +632,7 @@ impl super::PrivateCapabilities {
             msaa_apple7: family_check && device.supports_family(MTLGPUFamily::Apple7),
             resource_heaps: Self::supports_any(device, RESOURCE_HEAP_SUPPORT),
             argument_buffers,
-            shared_textures: !os_is_mac,
+            shared_textures: version.at_least((10, 14), (13, 0), os_is_mac),
             mutable_comparison_samplers: Self::supports_any(
                 device,
                 MUTABLE_COMPARISON_SAMPLER_SUPPORT,
@@ -992,6 +992,8 @@ impl super::PrivateCapabilities {
         if self.supports_simd_scoped_operations {
             features.insert(F::SUBGROUP | F::SUBGROUP_BARRIER);
         }
+
+        features.set(F::SHARED_TEXTURES, self.shared_textures);
 
         features
     }

@@ -59,6 +59,9 @@ mod webgpu_impl {
 
     #[doc(hidden)]
     pub const WEBGPU_FEATURE_DUAL_SOURCE_BLENDING: u64 = 1 << 13;
+
+    #[doc(hidden)]
+    pub const WEBGPU_FEATURE_SHARED_TEXTURES: u64 = 1 << 14;
 }
 
 macro_rules! bitflags_array_impl {
@@ -1443,7 +1446,6 @@ bitflags_array! {
         ///
         /// This is a web and native feature.
         const FLOAT32_FILTERABLE = WEBGPU_FEATURE_FLOAT32_FILTERABLE;
-
         /// Allows two outputs from a shader to be used for blending.
         /// Note that dual-source blending doesn't support multiple render targets.
         ///
@@ -1455,6 +1457,12 @@ bitflags_array! {
         /// - Vulkan (with dualSrcBlend)
         /// - DX12
         const DUAL_SOURCE_BLENDING = WEBGPU_FEATURE_DUAL_SOURCE_BLENDING;
+
+        /// Allows devices to create shared textures.
+        ///
+        /// Supported platforms:
+        /// - Metal (with MSL 2.0+ on macOS 10.14+)
+        const SHARED_TEXTURES = WEBGPU_FEATURE_SHARED_TEXTURES;
     }
 }
 
