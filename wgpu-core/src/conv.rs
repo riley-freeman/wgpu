@@ -146,6 +146,12 @@ pub fn map_texture_usage(
         wgt::TextureUses::STORAGE_ATOMIC,
         usage.contains(wgt::TextureUsages::STORAGE_ATOMIC),
     );
+    u.set(
+        wgt::TextureUses::SHARED,
+        usage.contains(wgt::TextureUsages::SHARED) &&
+        flags.contains(wgt::TextureFormatFeatureFlags::SHARED)
+    );
+
     u
 }
 

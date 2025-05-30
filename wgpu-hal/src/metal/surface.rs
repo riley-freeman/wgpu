@@ -213,6 +213,7 @@ impl crate::Surface for super::Surface {
                     height: extent.height,
                     depth: 1,
                 },
+                shared_handle: None,
             },
             drawable,
             present_with_transaction: self.present_with_transaction,

@@ -1,4 +1,5 @@
 use alloc::{borrow::ToOwned as _, sync::Arc, vec::Vec};
+use objc::msg_send;
 use core::{ptr::NonNull, sync::atomic};
 use std::{thread, time};
 
@@ -320,6 +321,7 @@ impl super::Device {
         array_layers: u32,
         mip_levels: u32,
         copy_size: crate::CopyExtent,
+        shared_handle: Option<*mut objc::runtime::Object>,
     ) -> super::Texture {
         super::Texture {
             raw,
@@ -328,6 +330,7 @@ impl super::Device {
             array_layers,
             mip_levels,
             copy_size,
+            shared_handle,
         }
     }
 
@@ -441,12 +444,28 @@ impl crate::Device for super::Device {
             descriptor.set_usage(conv::map_texture_usage(desc.format, desc.usage));
             descriptor.set_storage_mode(MTLStorageMode::Private);
 
-            let raw = self.shared.device.lock().new_texture(&descriptor);
+            let raw = if desc.usage.contains(wgt::TextureUses::SHARED) {
+                // Apparently nobody cares about shared textures...
+                msg_send![self.shared.device.lock().as_ref(), newSharedTextureWithDescriptor:descriptor]
+            } else {
+                self.shared.device.lock().new_texture(&descriptor)
+            };
             if raw.as_ptr().is_null() {
                 return Err(crate::DeviceError::OutOfMemory);
             }
+
             if let Some(label) = desc.label {
                 raw.set_label(label);
+            }
+
+            // Create a shared handle (if requested)
+            let mut shared_handle: *mut objc::runtime::Object = std::ptr::null_mut();
+            if desc.usage.contains(wgt::TextureUses::SHARED) {
+                shared_handle = msg_send![raw, newSharedTextureHandle];
+                if shared_handle.is_null() {
+                    log::error!("Failed to create a shared texture handle for {:?}", desc);
+                    return Err(crate::DeviceError::ResourceCreationFailed);
+                }
             }
 
             self.counters.textures.add(1);
@@ -458,6 +477,11 @@ impl crate::Device for super::Device {
                 mip_levels: desc.mip_level_count,
                 array_layers: desc.array_layer_count(),
                 copy_size: desc.copy_extent(),
+                shared_handle: if shared_handle.is_null() {
+                    None
+                } else {
+                    Some(shared_handle)
+                },
             })
         })
     }

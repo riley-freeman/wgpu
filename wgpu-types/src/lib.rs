@@ -1826,6 +1826,8 @@ bitflags::bitflags! {
         const STORAGE_ATOMIC = 1 << 9;
         /// If not present, the texture can't be blended into the render target.
         const BLENDABLE = 1 << 10;
+        /// Texture's memory can be accessed by external processes.
+        const SHARED = 1 << 11;
     }
 }
 
@@ -2883,9 +2885,16 @@ impl TextureFormat {
             | TextureFormatFeatureFlags::STORAGE_WRITE_ONLY;
         let s_all = s_ro_wo | TextureFormatFeatureFlags::STORAGE_READ_WRITE;
 
+
+        let shared_if = if device_features.contains(Features::SHARED_TEXTURES) {
+            TextureUsages::SHARED
+        } else {
+            TextureUsages::empty()
+        };
+
         // Flags
         let basic =
-            TextureUsages::COPY_SRC | TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING;
+            TextureUsages::COPY_SRC | TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING | shared_if;
         let attachment = basic | TextureUsages::RENDER_ATTACHMENT;
         let storage = basic | TextureUsages::STORAGE_BINDING;
         let binding = TextureUsages::TEXTURE_BINDING;
@@ -3014,6 +3023,10 @@ impl TextureFormat {
         flags.set(
             TextureFormatFeatureFlags::STORAGE_ATOMIC,
             allowed_usages.contains(TextureUsages::STORAGE_ATOMIC),
+        );
+        flags.set(
+            TextureFormatFeatureFlags::SHARED,
+            device_features.contains(Features::SHARED_TEXTURES),
         );
 
         TextureFormatFeatures {
@@ -5312,6 +5325,9 @@ bitflags::bitflags! {
         /// Allows a texture to be an output attachment of a render pass.
         const RENDER_ATTACHMENT = 1 << 4;
 
+        /// Allows a texture to export shared handles.
+        const SHARED = 1 << 5;
+
         //
         // ---- Restart Numbering for Native Features ---
         //
@@ -5370,9 +5386,14 @@ bitflags::bitflags! {
 
         /// Flag used by the wgpu-core texture tracker to say a texture is in different states for every sub-resource
         const COMPLEX = 1 << 12;
+        
+        /// Image can be shared with another process.
+        /// cbindgen:ignore
+        const SHARED = 1 << 13;
+
         /// Flag used by the wgpu-core texture tracker to say that the tracker does not know the state of the sub-resource.
         /// This is different from UNINITIALIZED as that says the tracker does know, but the texture has not been initialized.
-        const UNKNOWN = 1 << 13;
+        const UNKNOWN = 1 << 14;
     }
 }
 

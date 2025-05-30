@@ -524,9 +524,13 @@ pub struct Texture {
     raw: metal::Texture,
     format: wgt::TextureFormat,
     raw_type: MTLTextureType,
-    array_layers: u32,
+    array_layers: u32, 
     mip_levels: u32,
     copy_size: crate::CopyExtent,
+
+    #[allow(dead_code)] // Shut up the compiler for now...
+    /// https://developer.apple.com/documentation/metal/mtlsharedtexturehandle?language=objc
+    shared_handle: Option<*mut objc::runtime::Object>,
 }
 
 impl Texture {

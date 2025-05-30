@@ -745,6 +745,11 @@ impl Adapter {
             caps.contains(Tfc::MULTISAMPLE_RESOLVE),
         );
 
+        flags.set (
+            wgt::TextureFormatFeatureFlags::SHARED,
+            caps.contains(Tfc::SHARED),
+        );
+
         wgt::TextureFormatFeatures {
             allowed_usages,
             flags,

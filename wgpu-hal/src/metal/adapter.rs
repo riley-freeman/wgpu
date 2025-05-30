@@ -125,6 +125,12 @@ impl crate::Adapter for super::Adapter {
             Tfc::empty()
         };
 
+        let shared_if = if self.shared.private_caps.shared_textures {
+            Tfc::SHARED
+        } else {
+            Tfc::empty()
+        };
+
         // Metal defined pixel format capabilities
         let all_caps = Tfc::SAMPLED_LINEAR
             | Tfc::STORAGE_WRITE_ONLY
@@ -335,7 +341,7 @@ impl crate::Adapter for super::Adapter {
             }
         };
 
-        Tfc::COPY_SRC | Tfc::COPY_DST | Tfc::SAMPLED | Tfc::STORAGE_READ_ONLY | extra
+        Tfc::COPY_SRC | Tfc::COPY_DST | Tfc::SAMPLED | Tfc::STORAGE_READ_ONLY | extra | shared_if
     }
 
     unsafe fn surface_capabilities(

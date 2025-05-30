@@ -254,6 +254,9 @@ pub mod gles;
 /// Metal API internals.
 #[cfg(metal)]
 pub mod metal;
+#[cfg(metal)]
+#[macro_use]
+extern crate objc;
 /// A dummy API implementation.
 // TODO(https://github.com/gfx-rs/wgpu/issues/7120): this should have a cfg
 pub mod noop;
@@ -1654,6 +1657,9 @@ bitflags!(
         const COPY_SRC = 1 << 15;
         /// Format can be copied to.
         const COPY_DST = 1 << 16;
+
+        /// Format can be used in a shared texture.
+        const SHARED = 1 << 17;
     }
 );
 
