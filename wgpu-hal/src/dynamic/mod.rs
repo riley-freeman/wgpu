@@ -121,7 +121,9 @@ pub trait DynSurfaceTexture:
     DynResource + core::borrow::Borrow<dyn DynTexture> + fmt::Debug
 {
 }
-pub trait DynTexture: DynResource + fmt::Debug {}
+pub trait DynTexture: DynResource + fmt::Debug {
+    fn shared_handle(&self) -> Option<usize>;
+}
 pub trait DynTextureView: DynResource + fmt::Debug {}
 
 impl<'a> BufferBinding<'a, dyn DynBuffer> {

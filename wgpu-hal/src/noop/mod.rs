@@ -74,7 +74,11 @@ impl crate::DynRenderPipeline for Resource {}
 impl crate::DynSampler for Resource {}
 impl crate::DynShaderModule for Resource {}
 impl crate::DynSurfaceTexture for Resource {}
-impl crate::DynTexture for Resource {}
+impl crate::DynTexture for Resource {
+    fn shared_handle(&self) -> Option<usize> {
+        Some(0)
+    }
+}
 impl crate::DynTextureView for Resource {}
 
 impl core::borrow::Borrow<dyn crate::DynTexture> for Resource {

@@ -542,7 +542,11 @@ impl Texture {
     }
 }
 
-impl crate::DynTexture for Texture {}
+impl crate::DynTexture for Texture {
+    fn shared_handle(&self) -> Option<usize> {
+        self.shared_handle.map(|handle| handle as usize)
+    }
+}
 
 unsafe impl Send for Texture {}
 unsafe impl Sync for Texture {}

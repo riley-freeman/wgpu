@@ -401,7 +401,11 @@ pub struct Texture {
     pub copy_size: CopyExtent,
 }
 
-impl crate::DynTexture for Texture {}
+impl crate::DynTexture for Texture {
+    fn shared_handle(&self) -> Option<usize> {
+        todo!()
+    }
+}
 impl crate::DynSurfaceTexture for Texture {}
 
 impl core::borrow::Borrow<dyn crate::DynTexture> for Texture {

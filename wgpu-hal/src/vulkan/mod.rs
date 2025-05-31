@@ -800,7 +800,11 @@ pub struct Texture {
     copy_size: crate::CopyExtent,
 }
 
-impl crate::DynTexture for Texture {}
+impl crate::DynTexture for Texture {
+    fn shared_handle(&self) -> Option<usize> {
+        todo!()
+    }
+}
 
 impl Texture {
     /// # Safety
