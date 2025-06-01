@@ -490,6 +490,29 @@ impl Global {
         (id, Some(error))
     }
 
+    pub fn texture_shared_handle(&self, texture_id: id::TextureId) -> Option<usize> {
+        profiling::scope!("Texture::shared_handle");
+        api_log!("Texture::shared_handle");
+
+        let hub = &self.hub;
+
+        match hub.textures.get(texture_id).get() {
+            Ok(texture) => {
+                if let Some(shared_handle) = texture.shared_handle() {
+                    api_log!("Texture::shared_handle -> {shared_handle:?}");
+                    Some(shared_handle)
+                } else {
+                    api_log!("Texture::shared_handle failed: no shared handle");
+                    None
+                }
+            },
+            Err(_) => {
+                api_log!("Texture::shared_handle failed: texture not found");
+                None
+            },
+        }
+    }
+
     pub fn texture_view_drop(
         &self,
         texture_view_id: id::TextureViewId,

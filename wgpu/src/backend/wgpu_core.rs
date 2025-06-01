@@ -2102,6 +2102,10 @@ impl dispatch::TextureInterface for CoreTexture {
     fn destroy(&self) {
         self.context.0.texture_destroy(self.id);
     }
+
+    fn shared_handle(&self) -> Option<usize> {
+        self.context.0.texture_shared_handle(self.id)
+    }
 }
 
 impl Drop for CoreTexture {

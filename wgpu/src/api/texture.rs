@@ -131,6 +131,13 @@ impl Texture {
     pub fn usage(&self) -> TextureUsages {
         self.descriptor.usage
     }
+
+    /// Returns the shared handle of this `Texture`.
+    ///
+    /// This is only available if the texture was created with the `SHARED` usage.
+    pub fn shared_handle(&self) -> Option<usize> {
+        self.inner.shared_handle()
+    }
 }
 
 /// Describes a [`Texture`].

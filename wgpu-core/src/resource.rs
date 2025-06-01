@@ -1030,6 +1030,7 @@ pub struct Texture {
     pub(crate) clear_mode: RwLock<TextureClearMode>,
     pub(crate) views: Mutex<WeakVec<TextureView>>,
     pub(crate) bind_groups: Mutex<WeakVec<BindGroup>>,
+    pub(crate) shared_handle: Option<usize>,
 }
 
 impl Texture {
@@ -1042,6 +1043,15 @@ impl Texture {
         clear_mode: TextureClearMode,
         init: bool,
     ) -> Self {
+        let shared_handle = if desc.usage.contains(wgt::TextureUsages::SHARED) {
+            match &inner {
+                TextureInner::Native { raw } => raw.shared_handle(),
+                TextureInner::Surface { .. } => None, // Surface textures can't be shared
+            }
+        } else {
+            None
+        };
+
         Texture {
             inner: Snatchable::new(inner),
             device: device.clone(),
@@ -1065,6 +1075,7 @@ impl Texture {
             clear_mode: RwLock::new(rank::TEXTURE_CLEAR_MODE, clear_mode),
             views: Mutex::new(rank::TEXTURE_VIEWS, WeakVec::new()),
             bind_groups: Mutex::new(rank::TEXTURE_BIND_GROUPS, WeakVec::new()),
+            shared_handle
         }
     }
 
@@ -1083,6 +1094,13 @@ impl Texture {
                 expected,
             })
         }
+    }
+
+
+    /// Returns the texture's shared handle.
+    pub(crate) fn shared_handle(&self) -> Option<usize> {
+        self.shared_handle.clone() // Already automatically cloned but I just wanted to look cool
+                                   // in front of the hoes. 
     }
 }
 

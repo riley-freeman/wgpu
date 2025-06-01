@@ -254,6 +254,8 @@ pub trait TextureInterface: CommonTraits {
     fn create_view(&self, desc: &crate::TextureViewDescriptor<'_>) -> DispatchTextureView;
 
     fn destroy(&self);
+
+    fn shared_handle(&self) -> Option<usize>;
 }
 pub trait BlasInterface: CommonTraits {}
 pub trait TlasInterface: CommonTraits {}
