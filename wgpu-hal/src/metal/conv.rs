@@ -3,7 +3,8 @@ use metal::{
     MTLCompareFunction, MTLCullMode, MTLOrigin, MTLPrimitiveTopologyClass, MTLPrimitiveType,
     MTLRenderStages, MTLResourceUsage, MTLSamplerAddressMode, MTLSamplerBorderColor,
     MTLSamplerMinMagFilter, MTLSize, MTLStencilOperation, MTLStoreAction, MTLTextureType,
-    MTLTextureUsage, MTLVertexFormat, MTLVertexStepFunction, MTLWinding, NSRange,
+    MTLTextureUsage, MTLVertexFormat, MTLVertexStepFunction, MTLWinding, MTLPixelFormat,
+    MTLStorageMode, NSRange,
 };
 
 pub fn map_texture_usage(format: wgt::TextureFormat, usage: wgt::TextureUses) -> MTLTextureUsage {
@@ -353,3 +354,73 @@ pub fn map_resource_usage(ty: &wgt::BindingType) -> MTLResourceUsage {
         _ => unreachable!(),
     }
 }
+
+pub fn map_texture_descriptor (
+    desc: &crate::TextureDescriptor,
+    mtl_format: MTLPixelFormat,
+) -> metal::TextureDescriptor {
+    let mtl_desc = metal::TextureDescriptor::new();
+
+    let mtl_type = match desc.dimension {
+        wgt::TextureDimension::D1 => MTLTextureType::D1,
+        wgt::TextureDimension::D2 => {
+            if desc.sample_count > 1 {
+                mtl_desc.set_sample_count(desc.sample_count as u64);
+                MTLTextureType::D2Multisample
+            } else if desc.size.depth_or_array_layers > 1 {
+                mtl_desc.set_array_length(desc.size.depth_or_array_layers as u64);
+                MTLTextureType::D2Array
+            } else {
+                MTLTextureType::D2
+            }
+        }
+        wgt::TextureDimension::D3 => {
+            mtl_desc.set_depth(desc.size.depth_or_array_layers as u64);
+            MTLTextureType::D3
+        }
+    };
+
+    mtl_desc.set_texture_type(mtl_type);
+    mtl_desc.set_width(desc.size.width as u64);
+    mtl_desc.set_height(desc.size.height as u64);
+    mtl_desc.set_mipmap_level_count(desc.mip_level_count as u64);
+    mtl_desc.set_pixel_format(mtl_format);
+    mtl_desc.set_usage(map_texture_usage(desc.format, desc.usage));
+    mtl_desc.set_storage_mode(MTLStorageMode::Private);
+    mtl_desc
+}
+
+pub fn map_bytes_per_element(format: MTLPixelFormat) -> u8 {
+    use MTLPixelFormat::*;
+    // Check out the Apple Documentation (https://developer.apple.com/documentation/metal/mtlpixelformat?language=objc)
+    match format {
+        // 8-bit Pixel formats
+        A8Unorm | R8Unorm | R8Unorm_sRGB | R8Snorm | R8Uint | R8Sint  => 1,
+
+        // Ordinary 16-bit Pixel formats
+        R16Unorm | R16Snorm | R16Uint | R16Sint | R16Float => 2,
+        RG8Unorm | RG8Unorm_sRGB | RG8Snorm | RG8Uint | RG8Sint => 2,
+        
+        // Packaged 16-bit Pixel Formats
+        B5G6R5Unorm | A1BGR5Unorm | BGR5A1Unorm => 2,
+
+        // Ordinary 32-bit Pixel Formats
+        R32Uint | R32Sint | R32Float => 4,
+        RG16Unorm | RG16Snorm | RG16Uint | RG16Sint | RG16Float => 4,
+        RGBA8Unorm | RGBA8Unorm_sRGB | RGBA8Snorm | RGBA8Uint | RGBA8Sint | BGRA8Unorm | BGRA8Unorm_sRGB => 4,
+
+        // Packaged 32-bit Pixel Formats 
+        BGR10A2Unorm | RGB10A2Unorm | RGB10A2Uint | RG11B10Float | RGB9E5Float => 4,
+
+        // Ordinary 64-bit Pixel Formats
+        RG32Uint | RG32Sint | RG32Float => 8,
+        RGBA16Unorm | RGBA16Snorm | RGBA16Uint | RGBA16Sint | RGBA16Float => 8,
+
+        // Ordinary 128-bit Pixel Formats
+        RGBA32Uint | RGBA32Sint | RGBA32Float => 16,
+
+        // Ignore the other formats for now...
+        _ => todo!(),
+    }
+}
+
