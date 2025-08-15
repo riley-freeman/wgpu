@@ -75,7 +75,7 @@ impl crate::DynSampler for Resource {}
 impl crate::DynShaderModule for Resource {}
 impl crate::DynSurfaceTexture for Resource {}
 impl crate::DynTexture for Resource {
-    fn shared_handle(&self) -> Option<usize> {
+    fn shared_handle(&self) -> Option<u32> {
         Some(0)
     }
 }
@@ -312,6 +312,9 @@ impl crate::Device for Context {
     unsafe fn invalidate_mapped_ranges<I>(&self, buffer: &Buffer, ranges: I) {}
 
     unsafe fn create_texture(&self, desc: &crate::TextureDescriptor) -> DeviceResult<Resource> {
+        Ok(Resource)
+    }
+    unsafe fn create_texture_with_handle(&self, desc: &crate::TextureDescriptor, handle: u32) -> DeviceResult<Resource> {
         Ok(Resource)
     }
     unsafe fn destroy_texture(&self, texture: Resource) {}

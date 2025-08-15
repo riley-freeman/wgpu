@@ -148,6 +148,9 @@ fragile-send-sync-non-atomic-wasm = [
     "wgpu-types/fragile-send-sync-non-atomic-wasm",
 ]
 
+## Enable creating shared images across multiple processes.
+shared-resources = ["wgpu-core?/shared-resources"]
+
 #########################
 # Standard Dependencies #
 #########################

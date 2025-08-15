@@ -73,7 +73,6 @@ unexpected_cfgs = { level = "warn", check-cfg = [
 metal = [
     # Metal is only available on Apple platforms, therefore request MSL output also only if we target an Apple platform.
     "naga/msl-out",
-    "dep:arrayvec",
     "dep:block",
     "dep:core-graphics-types",
     "dep:hashbrown",
@@ -86,7 +85,6 @@ metal = [
 vulkan = [
     "naga/spv-out",
     "dep:android_system_properties",
-    "dep:arrayvec",
     "dep:ash",
     "dep:bytemuck",
     "dep:gpu-alloc",
@@ -103,7 +101,6 @@ vulkan = [
 ]
 gles = [
     "naga/glsl-out",
-    "dep:arrayvec",
     "dep:bytemuck",
     "dep:cfg-if",
     "dep:glow",
@@ -126,7 +123,6 @@ gles = [
 ## Enables the DX12 backend when targeting Windows.
 dx12 = [
     "naga/hlsl-out",
-    "dep:arrayvec",
     "dep:bit-set",
     "dep:bytemuck",
     "dep:hashbrown",
@@ -161,6 +157,7 @@ fragile-send-sync-non-atomic-wasm = [
     "wgpu-types/fragile-send-sync-non-atomic-wasm",
 ]
 portable-atomic = ["dep:portable-atomic"]
+shared-resources = ["dep:objc2", "dep:objc2-core-foundation", "dep:objc2-io-surface"]
 
 ###################################
 ### Internal Debugging Features ###
@@ -197,6 +194,7 @@ required-features = ["gles"]
 [dependencies]
 naga.workspace = true
 wgpu-types.workspace = true
+arrayvec.workspace = true
 
 # Dependencies in the lib and empty backend
 bitflags.workspace = true
@@ -205,7 +203,6 @@ parking_lot.workspace = true
 thiserror.workspace = true
 
 # Target agnostic dependencies used only in backends.
-arrayvec = { workspace = true, optional = true }
 bytemuck = { workspace = true, optional = true, features = ["derive"] }
 hashbrown = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
@@ -273,6 +270,18 @@ block = { workspace = true, optional = true }
 core-graphics-types = { workspace = true, optional = true }
 metal = { workspace = true, optional = true }
 objc = { workspace = true, optional = true }
+objc2 = { workspace = true, optional = true }
+objc2-core-foundation = { workspace = true, optional = true, features = [
+    "CFDictionary",
+    "CFNumber",
+]}
+objc2-io-surface = { workspace = true, optional = true, features = [
+    "IOSurfaceRef",
+    "IOSurfaceTypes",
+    "objc2",
+    "objc2-foundation",
+    "objc2-core-foundation",
+]}
 
 #########################
 ### Platform: Android ###

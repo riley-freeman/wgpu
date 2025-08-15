@@ -1,5 +1,7 @@
 use alloc::{borrow::ToOwned as _, sync::Arc, vec::Vec};
 use objc::msg_send;
+use objc2_core_foundation::{CFDictionary, CFNumber, CFRetained};
+use objc2_io_surface::{IOSurfacePropertyKeyBytesPerElement, IOSurfacePropertyKeyHeight, IOSurfacePropertyKeyPixelFormat, IOSurfacePropertyKeyWidth, IOSurfaceRef};
 use core::{ptr::NonNull, sync::atomic};
 use std::{thread, time};
 
@@ -321,7 +323,7 @@ impl super::Device {
         array_layers: u32,
         mip_levels: u32,
         copy_size: crate::CopyExtent,
-        shared_handle: Option<*mut objc::runtime::Object>,
+        io_surface: Option<CFRetained<IOSurfaceRef>>,
     ) -> super::Texture {
         super::Texture {
             raw,
@@ -330,7 +332,7 @@ impl super::Device {
             array_layers,
             mip_levels,
             copy_size,
-            shared_handle,
+            io_surface,
         }
     }
 
@@ -410,62 +412,68 @@ impl crate::Device for super::Device {
         &self,
         desc: &crate::TextureDescriptor,
     ) -> DeviceResult<super::Texture> {
-        use metal::foreign_types::ForeignType as _;
-
-        let mtl_format = self.shared.private_caps.map_format(desc.format);
-
         objc::rc::autoreleasepool(|| {
-            let descriptor = metal::TextureDescriptor::new();
+            let mtl_format = self.shared.private_caps.map_format(desc.format);
+            let descriptor = conv::map_texture_descriptor(desc, mtl_format);
+            let mtl_type = descriptor.texture_type();
 
-            let mtl_type = match desc.dimension {
-                wgt::TextureDimension::D1 => MTLTextureType::D1,
-                wgt::TextureDimension::D2 => {
-                    if desc.sample_count > 1 {
-                        descriptor.set_sample_count(desc.sample_count as u64);
-                        MTLTextureType::D2Multisample
-                    } else if desc.size.depth_or_array_layers > 1 {
-                        descriptor.set_array_length(desc.size.depth_or_array_layers as u64);
-                        MTLTextureType::D2Array
-                    } else {
-                        MTLTextureType::D2
-                    }
+            // Create a IOSurface (if requested)
+            let io_surface = if desc.usage.contains(wgt::TextureUses::SHARED) { unsafe {
+                // Create a IOSurface
+                let cf_width = CFNumber::new_i32(desc.size.width as _);
+                let cf_height = CFNumber::new_i32(desc.size.height as _);
+                let cf_pixel_format = CFNumber::new_i32(mtl_format as i32);
+                let cf_bytes_per_element = CFNumber::new_i8(conv::map_bytes_per_element(mtl_format) as _);
+
+                let keys = [
+                    IOSurfacePropertyKeyWidth,
+                    IOSurfacePropertyKeyHeight,
+                    IOSurfacePropertyKeyPixelFormat,
+                    IOSurfacePropertyKeyBytesPerElement,
+                ];
+
+                let values: [&CFNumber; 4] = [
+                    cf_width.as_ref(),
+                    cf_height.as_ref(),
+                    cf_pixel_format.as_ref(),
+                    cf_bytes_per_element.as_ref(),
+                ];
+
+                let properties = CFDictionary::new(
+                    None,
+                    keys.as_ptr() as _,
+                    values.as_ptr() as _, 
+                    values.len() as _,
+                    std::ptr::null(),
+                   std::ptr::null() 
+                ).ok_or(crate::DeviceError::OutOfMemory)?;
+
+                let io_surface = IOSurfaceRef::new(&properties)
+                    .ok_or(crate::DeviceError::ResourceCreationFailed)?;
+
+                Some(io_surface)
+            } } else {
+                None
+            };
+
+            let raw = match io_surface.clone() {
+                Some(surface) => {
+                    msg_send![self.shared.device.lock().as_ref(),
+                        newTextureWithDescriptor:&descriptor
+                        iosurface:surface
+                        plane:0]
                 }
-                wgt::TextureDimension::D3 => {
-                    descriptor.set_depth(desc.size.depth_or_array_layers as u64);
-                    MTLTextureType::D3
+                None => {
+                    self.shared.device.lock().new_texture(&descriptor)
                 }
             };
 
-            descriptor.set_texture_type(mtl_type);
-            descriptor.set_width(desc.size.width as u64);
-            descriptor.set_height(desc.size.height as u64);
-            descriptor.set_mipmap_level_count(desc.mip_level_count as u64);
-            descriptor.set_pixel_format(mtl_format);
-            descriptor.set_usage(conv::map_texture_usage(desc.format, desc.usage));
-            descriptor.set_storage_mode(MTLStorageMode::Private);
-
-            let raw = if desc.usage.contains(wgt::TextureUses::SHARED) {
-                // Apparently nobody cares about shared textures...
-                msg_send![self.shared.device.lock().as_ref(), newSharedTextureWithDescriptor:descriptor]
-            } else {
-                self.shared.device.lock().new_texture(&descriptor)
-            };
             if raw.as_ptr().is_null() {
                 return Err(crate::DeviceError::OutOfMemory);
             }
 
             if let Some(label) = desc.label {
                 raw.set_label(label);
-            }
-
-            // Create a shared handle (if requested)
-            let mut shared_handle: *mut objc::runtime::Object = std::ptr::null_mut();
-            if desc.usage.contains(wgt::TextureUses::SHARED) {
-                shared_handle = msg_send![raw, newSharedTextureHandle];
-                if shared_handle.is_null() {
-                    log::error!("Failed to create a shared texture handle for {:?}", desc);
-                    return Err(crate::DeviceError::ResourceCreationFailed);
-                }
             }
 
             self.counters.textures.add(1);
@@ -477,11 +485,36 @@ impl crate::Device for super::Device {
                 mip_levels: desc.mip_level_count,
                 array_layers: desc.array_layer_count(),
                 copy_size: desc.copy_extent(),
-                shared_handle: if shared_handle.is_null() {
-                    None
-                } else {
-                    Some(shared_handle)
-                },
+                io_surface,
+            })
+        })
+    }
+
+    unsafe fn create_texture_with_handle(
+            &self,
+            desc: &crate::TextureDescriptor,
+            handle: u32,
+        ) -> Result<<Self::A as crate::Api>::Texture, crate::DeviceError> {
+        objc::rc::autoreleasepool(|| {
+            let mtl_format = self.shared.private_caps.map_format(desc.format);
+            let descriptor = conv::map_texture_descriptor(desc, mtl_format);
+            let mtl_type = descriptor.texture_type();
+
+            let io_surface = IOSurfaceRef::lookup(handle).ok_or(crate::DeviceError::Lost)?;
+
+            let raw = msg_send![self.shared.device.lock().as_ref(),
+                newTextureWithDescriptor:&descriptor
+                iosurface:io_surface.clone()
+                plane:0];
+
+            Ok(super::Texture {
+                raw,
+                format: desc.format,
+                raw_type: mtl_type,
+                mip_levels: desc.mip_level_count,
+                array_layers: desc.array_layer_count(),
+                copy_size: desc.copy_extent(),
+                io_surface: Some(io_surface),
             })
         })
     }

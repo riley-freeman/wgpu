@@ -122,7 +122,7 @@ pub trait DynSurfaceTexture:
 {
 }
 pub trait DynTexture: DynResource + fmt::Debug {
-    fn shared_handle(&self) -> Option<usize>;
+    fn shared_handle(&self) -> Option<u32>;
 }
 pub trait DynTextureView: DynResource + fmt::Debug {}
 

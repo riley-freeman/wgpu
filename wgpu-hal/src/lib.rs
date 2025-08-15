@@ -838,6 +838,14 @@ pub trait Device: WasmNotSendSync {
         &self,
         desc: &TextureDescriptor,
     ) -> Result<<Self::A as Api>::Texture, DeviceError>;
+    /// Creates a new texture with a shared handle.
+    ///
+    /// The initial usage for all subresources is `wgt::TextureUses::UNINITIALIZED`.
+    unsafe fn create_texture_with_handle(
+        &self,
+        desc: &TextureDescriptor,
+        handle: u32,
+    ) -> Result<<Self::A as Api>::Texture, DeviceError>;
     unsafe fn destroy_texture(&self, texture: <Self::A as Api>::Texture);
 
     /// A hook for when a wgpu-core texture is created from a raw wgpu-hal texture.

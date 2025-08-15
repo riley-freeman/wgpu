@@ -41,6 +41,11 @@ pub trait DynDevice: DynResource {
         &self,
         desc: &TextureDescriptor,
     ) -> Result<Box<dyn DynTexture>, DeviceError>;
+    unsafe fn create_texture_with_handle(
+        &self,
+        desc: &TextureDescriptor,
+        handle: u32,
+    ) -> Result<Box<dyn DynTexture>, DeviceError>;
     unsafe fn destroy_texture(&self, texture: Box<dyn DynTexture>);
     unsafe fn add_raw_texture(&self, texture: &dyn DynTexture);
 
@@ -220,6 +225,18 @@ impl<D: Device + DynResource> DynDevice for D {
         desc: &TextureDescriptor,
     ) -> Result<Box<dyn DynTexture>, DeviceError> {
         unsafe { D::create_texture(self, desc) }.map(|b| {
+            let boxed_texture: Box<<D::A as Api>::Texture> = Box::new(b);
+            let boxed_texture: Box<dyn DynTexture> = boxed_texture;
+            boxed_texture
+        })
+    }
+
+    unsafe fn create_texture_with_handle(
+        &self,
+        desc: &TextureDescriptor,
+        handle: u32,
+    ) -> Result<Box<dyn DynTexture>, DeviceError> {
+        unsafe { D::create_texture_with_handle(self, desc, handle) }.map(|b| {
             let boxed_texture: Box<<D::A as Api>::Texture> = Box::new(b);
             let boxed_texture: Box<dyn DynTexture> = boxed_texture;
             boxed_texture

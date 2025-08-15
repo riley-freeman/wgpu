@@ -71,6 +71,7 @@ wgpu = { version = "25.0.0", path = "./wgpu", default-features = false, features
     "gles",
     "dx12",
     "metal",
+    "shared-resources",
     "static-dxc",
     "noop",       # This should be removed if we ever have non-test crates that depend on wgpu
 ] }
@@ -229,6 +230,12 @@ wasm-bindgen-futures = "0.4.43"
 wasm-bindgen-test = "0.3"
 web-sys = { version = "0.3.77", default-features = false }
 web-time = "1"
+
+# Shared Resources dependencies
+# shared_memory = { version = "0.12.4", default-features = false }
+objc2 = { version = "0.6.2", default-features = false }
+objc2-core-foundation = { version = "0.3.1", default-features = false }
+objc2-io-surface = { version = "0.3.1", default-features = false }
 
 # deno dependencies
 deno_console = "0.192.0"

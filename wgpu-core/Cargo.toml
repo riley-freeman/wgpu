@@ -154,6 +154,8 @@ angle = ["wgpu-core-deps-apple/angle"]
 vulkan-portability = ["wgpu-core-deps-apple/vulkan-portability"]
 ## Renderdoc integration, only available on Windows, Linux, and Android
 renderdoc = ["wgpu-core-deps-windows-linux-android/renderdoc"]
+# Shared resources only available on macOS
+shared-resources = ["wgpu-core-deps-apple/shared-resources"]
 
 ## Enable the `noop` backend.
 # TODO(https://github.com/gfx-rs/wgpu/issues/7120): there should be a hal feature

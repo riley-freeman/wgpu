@@ -27,6 +27,8 @@ mod surface;
 mod time;
 
 use alloc::{borrow::ToOwned as _, string::String, sync::Arc, vec::Vec};
+use objc2_core_foundation::CFRetained;
+use objc2_io_surface::IOSurfaceRef;
 use core::{fmt, iter, ops, ptr::NonNull, sync::atomic};
 use std::thread;
 
@@ -528,9 +530,7 @@ pub struct Texture {
     mip_levels: u32,
     copy_size: crate::CopyExtent,
 
-    #[allow(dead_code)] // Shut up the compiler for now...
-    /// https://developer.apple.com/documentation/metal/mtlsharedtexturehandle?language=objc
-    shared_handle: Option<*mut objc::runtime::Object>,
+    io_surface: Option<CFRetained<IOSurfaceRef>>,
 }
 
 impl Texture {
@@ -543,8 +543,9 @@ impl Texture {
 }
 
 impl crate::DynTexture for Texture {
-    fn shared_handle(&self) -> Option<usize> {
-        self.shared_handle.map(|handle| handle as usize)
+    fn shared_handle(&self) -> Option<u32> {
+        let surface = self.io_surface.as_ref()?;
+        Some(surface.id())
     }
 }
 
