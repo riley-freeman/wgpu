@@ -213,6 +213,7 @@ impl crate::Surface for super::Surface {
                     height: extent.height,
                     depth: 1,
                 },
+                #[cfg(feature = "shared-resources")]
                 io_surface: None
             },
             drawable,

@@ -41,6 +41,7 @@ pub trait DynDevice: DynResource {
         &self,
         desc: &TextureDescriptor,
     ) -> Result<Box<dyn DynTexture>, DeviceError>;
+    #[cfg(feature = "shared-resources")]
     unsafe fn create_texture_with_handle(
         &self,
         desc: &TextureDescriptor,
@@ -231,6 +232,7 @@ impl<D: Device + DynResource> DynDevice for D {
         })
     }
 
+    #[cfg(feature = "shared-resources")]
     unsafe fn create_texture_with_handle(
         &self,
         desc: &TextureDescriptor,

@@ -135,7 +135,7 @@ impl Texture {
     /// Returns the shared handle of this `Texture`.
     ///
     /// This is only available if the texture was created with the `SHARED` usage.
-    pub fn shared_handle(&self) -> Option<usize> {
+    pub fn shared_handle(&self) -> Option<u32> {
         self.inner.shared_handle()
     }
 }

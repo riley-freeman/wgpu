@@ -27,10 +27,13 @@ mod surface;
 mod time;
 
 use alloc::{borrow::ToOwned as _, string::String, sync::Arc, vec::Vec};
-use objc2_core_foundation::CFRetained;
-use objc2_io_surface::IOSurfaceRef;
 use core::{fmt, iter, ops, ptr::NonNull, sync::atomic};
 use std::thread;
+
+#[cfg(feature = "shared-resources")]
+use objc2_core_foundation::CFRetained;
+#[cfg(feature = "shared-resources")]
+use objc2_io_surface::IOSurfaceRef;
 
 use arrayvec::ArrayVec;
 use bitflags::bitflags;
@@ -530,6 +533,7 @@ pub struct Texture {
     mip_levels: u32,
     copy_size: crate::CopyExtent,
 
+    #[cfg(feature = "shared-resources")]
     io_surface: Option<CFRetained<IOSurfaceRef>>,
 }
 
@@ -543,9 +547,15 @@ impl Texture {
 }
 
 impl crate::DynTexture for Texture {
+    #[cfg(feature = "shared-resources")]
     fn shared_handle(&self) -> Option<u32> {
         let surface = self.io_surface.as_ref()?;
         Some(surface.id())
+    }
+
+    #[cfg(not(feature = "shared-resources"))]
+    fn shared_handle(&self) -> Option<u32> {
+        None
     }
 }
 

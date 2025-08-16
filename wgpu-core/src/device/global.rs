@@ -490,7 +490,7 @@ impl Global {
         (id, Some(error))
     }
 
-    pub fn texture_shared_handle(&self, texture_id: id::TextureId) -> Option<usize> {
+    pub fn texture_shared_handle(&self, texture_id: id::TextureId) -> Option<u32> {
         profiling::scope!("Texture::shared_handle");
         api_log!("Texture::shared_handle");
 

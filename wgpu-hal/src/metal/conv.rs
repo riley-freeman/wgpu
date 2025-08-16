@@ -390,6 +390,7 @@ pub fn map_texture_descriptor (
     mtl_desc
 }
 
+#[cfg(feature = "shared-resources")]
 pub fn map_bytes_per_element(format: MTLPixelFormat) -> u8 {
     use MTLPixelFormat::*;
     // Check out the Apple Documentation (https://developer.apple.com/documentation/metal/mtlpixelformat?language=objc)

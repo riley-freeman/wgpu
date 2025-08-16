@@ -255,7 +255,7 @@ pub trait TextureInterface: CommonTraits {
 
     fn destroy(&self);
 
-    fn shared_handle(&self) -> Option<usize>;
+    fn shared_handle(&self) -> Option<u32>;
 }
 pub trait BlasInterface: CommonTraits {}
 pub trait TlasInterface: CommonTraits {}

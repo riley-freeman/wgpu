@@ -2103,7 +2103,7 @@ impl dispatch::TextureInterface for CoreTexture {
         self.context.0.texture_destroy(self.id);
     }
 
-    fn shared_handle(&self) -> Option<usize> {
+    fn shared_handle(&self) -> Option<u32> {
         self.context.0.texture_shared_handle(self.id)
     }
 }

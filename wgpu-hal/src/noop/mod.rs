@@ -314,6 +314,7 @@ impl crate::Device for Context {
     unsafe fn create_texture(&self, desc: &crate::TextureDescriptor) -> DeviceResult<Resource> {
         Ok(Resource)
     }
+    #[cfg(feature = "shared-resources")]
     unsafe fn create_texture_with_handle(&self, desc: &crate::TextureDescriptor, handle: u32) -> DeviceResult<Resource> {
         Ok(Resource)
     }

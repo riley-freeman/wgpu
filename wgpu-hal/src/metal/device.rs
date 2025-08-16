@@ -1,7 +1,11 @@
 use alloc::{borrow::ToOwned as _, sync::Arc, vec::Vec};
-use objc::msg_send;
-use objc2_core_foundation::{CFDictionary, CFNumber, CFRetained};
+
+
+#[cfg(feature = "shared-resources")]
+use objc2_core_foundation::{CFDictionary, CFNumber};
+#[cfg(feature = "shared-resources")]
 use objc2_io_surface::{IOSurfacePropertyKeyBytesPerElement, IOSurfacePropertyKeyHeight, IOSurfacePropertyKeyPixelFormat, IOSurfacePropertyKeyWidth, IOSurfaceRef};
+
 use core::{ptr::NonNull, sync::atomic};
 use std::{thread, time};
 
@@ -323,7 +327,6 @@ impl super::Device {
         array_layers: u32,
         mip_levels: u32,
         copy_size: crate::CopyExtent,
-        io_surface: Option<CFRetained<IOSurfaceRef>>,
     ) -> super::Texture {
         super::Texture {
             raw,
@@ -332,7 +335,8 @@ impl super::Device {
             array_layers,
             mip_levels,
             copy_size,
-            io_surface,
+            #[cfg(feature = "shared-resources")]
+            io_surface: None,
         }
     }
 
@@ -418,55 +422,99 @@ impl crate::Device for super::Device {
             let mtl_type = descriptor.texture_type();
 
             // Create a IOSurface (if requested)
-            let io_surface = if desc.usage.contains(wgt::TextureUses::SHARED) { unsafe {
-                // Create a IOSurface
-                let cf_width = CFNumber::new_i32(desc.size.width as _);
-                let cf_height = CFNumber::new_i32(desc.size.height as _);
-                let cf_pixel_format = CFNumber::new_i32(mtl_format as i32);
-                let cf_bytes_per_element = CFNumber::new_i8(conv::map_bytes_per_element(mtl_format) as _);
+            let _io_surface = if desc.usage.contains(wgt::TextureUses::SHARED) {
+                #[cfg(feature = "shared-resources")]
+                unsafe {
+                    // Create a IOSurface
 
-                let keys = [
-                    IOSurfacePropertyKeyWidth,
-                    IOSurfacePropertyKeyHeight,
-                    IOSurfacePropertyKeyPixelFormat,
-                    IOSurfacePropertyKeyBytesPerElement,
-                ];
+                    use objc2_core_foundation::{CFArray, CFType};
+                    use objc2_io_surface::{IOSurfacePropertyKeyPlaneBytesPerElement, IOSurfacePropertyKeyPlaneHeight, IOSurfacePropertyKeyPlaneInfo, IOSurfacePropertyKeyPlaneWidth};
+                    let cf_width = CFNumber::new_i32(desc.size.width as _);
+                    let cf_height = CFNumber::new_i32(desc.size.height as _);
+                    let cf_pixel_format = CFNumber::new_i32(mtl_format as i32);
+                    let cf_bytes_per_element = CFNumber::new_i8(conv::map_bytes_per_element(mtl_format) as _);
 
-                let values: [&CFNumber; 4] = [
-                    cf_width.as_ref(),
-                    cf_height.as_ref(),
-                    cf_pixel_format.as_ref(),
-                    cf_bytes_per_element.as_ref(),
-                ];
+                    let plane_keys= [
+                        IOSurfacePropertyKeyPlaneWidth,
+                        IOSurfacePropertyKeyPlaneHeight,
+                        IOSurfacePropertyKeyPlaneBytesPerElement,
+                    ];
+                    let plane_values: [&CFNumber; 3] = [
+                        cf_width.as_ref(),
+                        cf_height.as_ref(),
+                        cf_bytes_per_element.as_ref()
+                    ];
+                    let plane_dictionary = CFDictionary::new(
+                        None,
+                        plane_keys.as_ptr() as _,
+                        plane_values.as_ptr() as _,
+                        plane_values.len() as _,
+                        std::ptr::null(),
+                        std::ptr::null(),
+                    ).ok_or(crate::DeviceError::OutOfMemory)?;
 
-                let properties = CFDictionary::new(
-                    None,
-                    keys.as_ptr() as _,
-                    values.as_ptr() as _, 
-                    values.len() as _,
-                    std::ptr::null(),
-                   std::ptr::null() 
-                ).ok_or(crate::DeviceError::OutOfMemory)?;
+                    let plane_array: [&CFDictionary; 1] = [plane_dictionary.as_ref()];
+                    let plane_array = CFArray::new (
+                        None,
+                        plane_array.as_ptr() as _,
+                        plane_array.len() as _,
+                        std::ptr::null(),
+                    ).ok_or(crate::DeviceError::OutOfMemory)?;
 
-                let io_surface = IOSurfaceRef::new(&properties)
-                    .ok_or(crate::DeviceError::ResourceCreationFailed)?;
+                    let prop_keys = [
+                        IOSurfacePropertyKeyWidth,
+                        IOSurfacePropertyKeyHeight,
+                        IOSurfacePropertyKeyPixelFormat,
+                        IOSurfacePropertyKeyBytesPerElement,
+                        IOSurfacePropertyKeyPlaneInfo,
+                    ];
+                    let prop_values: [&CFType; 5] = [
+                        cf_width.as_ref(),
+                        cf_height.as_ref(),
+                        cf_pixel_format.as_ref(),
+                        cf_bytes_per_element.as_ref(),
+                        plane_array.as_ref(),
+                    ];
+                    let properties = CFDictionary::new(
+                        None,
+                        prop_keys.as_ptr() as _,
+                        prop_values.as_ptr() as _, 
+                        prop_values.len() as _,
+                        std::ptr::null(),
+                       std::ptr::null() 
+                    ).ok_or(crate::DeviceError::OutOfMemory)?;
 
-                Some(io_surface)
-            } } else {
+                    Some(IOSurfaceRef::new(&properties).ok_or(crate::DeviceError::ResourceCreationFailed)?)
+                }
+                #[cfg(not(feature="shared-resources"))]
+                {
+                    return Err(crate::DeviceError::ResourceCreationFailed);
+
+                    #[allow(unreachable_code)] // Give the thing a type 
+                    Some(0)
+                }
+            } else {
                 None
             };
 
-            let raw = match io_surface.clone() {
+            #[cfg(feature="shared-resources")]
+            let raw = match _io_surface.clone() {
                 Some(surface) => {
-                    msg_send![self.shared.device.lock().as_ref(),
-                        newTextureWithDescriptor:&descriptor
-                        iosurface:surface
-                        plane:0]
+                    use objc::msg_send;
+                    let device = self.shared.device.lock();
+                    let surface: &IOSurfaceRef = surface.as_ref();
+                    msg_send![device.as_ref(),
+                        newTextureWithDescriptor:descriptor
+                        iosurface: surface
+                        plane:0
+                    ]
                 }
                 None => {
                     self.shared.device.lock().new_texture(&descriptor)
                 }
             };
+            #[cfg(not(feature="shared-resources"))]
+            let raw = self.shared.device.lock().new_texture(&descriptor);
 
             if raw.as_ptr().is_null() {
                 return Err(crate::DeviceError::OutOfMemory);
@@ -485,11 +533,14 @@ impl crate::Device for super::Device {
                 mip_levels: desc.mip_level_count,
                 array_layers: desc.array_layer_count(),
                 copy_size: desc.copy_extent(),
-                io_surface,
+
+                #[cfg(feature = "shared-resources")]
+                io_surface: _io_surface,
             })
         })
     }
 
+    #[cfg(all(metal,feature = "shared-resources"))]
     unsafe fn create_texture_with_handle(
             &self,
             desc: &crate::TextureDescriptor,

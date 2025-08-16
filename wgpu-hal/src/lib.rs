@@ -256,6 +256,7 @@ pub mod gles;
 pub mod metal;
 #[cfg(metal)]
 #[macro_use]
+#[allow(unused_imports)]
 extern crate objc;
 /// A dummy API implementation.
 // TODO(https://github.com/gfx-rs/wgpu/issues/7120): this should have a cfg
@@ -838,9 +839,12 @@ pub trait Device: WasmNotSendSync {
         &self,
         desc: &TextureDescriptor,
     ) -> Result<<Self::A as Api>::Texture, DeviceError>;
+
+
     /// Creates a new texture with a shared handle.
     ///
     /// The initial usage for all subresources is `wgt::TextureUses::UNINITIALIZED`.
+    #[cfg(feature = "shared-resources")]
     unsafe fn create_texture_with_handle(
         &self,
         desc: &TextureDescriptor,

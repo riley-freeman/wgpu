@@ -1030,7 +1030,7 @@ pub struct Texture {
     pub(crate) clear_mode: RwLock<TextureClearMode>,
     pub(crate) views: Mutex<WeakVec<TextureView>>,
     pub(crate) bind_groups: Mutex<WeakVec<BindGroup>>,
-    pub(crate) shared_handle: Option<usize>,
+    pub(crate) shared_handle: Option<u32>,
 }
 
 impl Texture {
@@ -1098,7 +1098,7 @@ impl Texture {
 
 
     /// Returns the texture's shared handle.
-    pub(crate) fn shared_handle(&self) -> Option<usize> {
+    pub(crate) fn shared_handle(&self) -> Option<u32> {
         self.shared_handle.clone() // Already automatically cloned but I just wanted to look cool
                                    // in front of the hoes. 
     }

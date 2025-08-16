@@ -157,7 +157,9 @@ fragile-send-sync-non-atomic-wasm = [
     "wgpu-types/fragile-send-sync-non-atomic-wasm",
 ]
 portable-atomic = ["dep:portable-atomic"]
-shared-resources = ["dep:objc2", "dep:objc2-core-foundation", "dep:objc2-io-surface"]
+
+apple-shared-resources = ["dep:objc2", "dep:objc2-core-foundation", "dep:objc2-io-surface"]
+shared-resources = ["apple-shared-resources"]
 
 ###################################
 ### Internal Debugging Features ###
@@ -273,6 +275,7 @@ objc = { workspace = true, optional = true }
 objc2 = { workspace = true, optional = true }
 objc2-core-foundation = { workspace = true, optional = true, features = [
     "CFDictionary",
+    "CFArray",
     "CFNumber",
 ]}
 objc2-io-surface = { workspace = true, optional = true, features = [
